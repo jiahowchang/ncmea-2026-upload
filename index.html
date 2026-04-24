@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NCMEA 2026 創新教學 ─ 資料上傳系統</title>
+  <style>
+    :root {
+      --c1: #c0392b; --c2: #d35400; --c3: #e67e22;
+      --c4: #27ae60; --c5: #2980b9; --c6: #8e44ad;
+      --bg: #f0f4f8; --card: #ffffff;
+      --text: #1a202c; --sub: #4a5568;
+      --border: #e2e8f0; --radius: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, "PingFang TC", "Microsoft JhengHei", sans-serif;
+           background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* SETUP BANNER */
+    #setup-banner {
+      background: #fff3cd; border-bottom: 2px solid #ffc107;
+      padding: 16px 24px; display: none;
+    }
+    #setup-banner h3 { color: #856404; margin-bottom: 8px; font-size: 15px; }
+    #setup-banner ol { padding-left: 20px; color: #6d5100; font-size: 13px; line-height: 1.8; }
+    #setup-banner code { background: #ffeaa7; padding: 1px 5px; border-radius: 4px; font-family: monospace; }
+
+    /* HEADER */
+    header {
+      background: linear-gradient(135deg, #1a3a5c 0%, #2c5282 100%);
+      color: white; padding: 24px 32px; display: flex; align-items: center; gap: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    header .badge {
+      background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 8px; padding: 8px 14px; font-size: 12px; letter-spacing: 0.5px;
+    }
+    header h1 { font-size: 22px; font-weight: 700; }
+    header p { font-size: 13px; opacity: 0.8; margin-top: 4px; }
+    .deadline-pill {
+      margin-left: auto; background: #e53e3e; border-radius: 20px;
+      padding: 6px 16px; font-size: 13px; font-weight: 600;
+      box-shadow: 0 2px 8px rgba(229,62,62,0.4);
+    }
+
+    /* MAIN */
+    main { max-width: 900px; margin: 0 auto; padding: 32px 20px; }
+
+    /* AUTH */
+    #auth-section {
+      background: var(--card); border-radius: var(--radius);
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+      padding: 48px 32px; text-align: center; margin-bottom: 24px;
+    }
+    #auth-section h2 { font-size: 20px; margin-bottom: 8px; }
+    #auth-section p { color: var(--sub); font-size: 14px; margin-bottom: 28px; }
+    #signin-btn {
+      background: white; border: 2px solid var(--border);
+      border-radius: 8px; padding: 12px 28px;
+      font-size: 15px; font-weight: 600; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 10px;
+      transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    #signin-btn:hover { border-color: #4285f4; box-shadow: 0 4px 16px rgba(66,133,244,0.2); transform: translateY(-1px); }
+    #signin-btn svg { width: 20px; height: 20px; }
+
+    /* USER BAR */
+    #user-bar {
+      background: var(--card); border-radius: var(--radius);
+      padding: 14px 20px; margin-bottom: 20px; display: none;
+      align-items: center; gap: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    #user-bar img { width: 36px; height: 36px; border-radius: 50%; }
+    #user-bar .name { font-weight: 600; font-size: 14px; }
+    #user-bar .email { font-size: 12px; color: var(--sub); }
+    #signout-btn {
+      margin-left: auto; background: none; border: 1px solid var(--border);
+      border-radius: 6px; padding: 6px 14px; cursor: pointer; font-size: 13px;
+      color: var(--sub); transition: all 0.2s;
+    }
+    #signout-btn:hover { border-color: #e53e3e; color: #e53e3e; }
+
+    /* UPLOAD FORM */
+    #upload-section { display: none; }
+
+    .card { background: var(--card); border-radius: var(--radius); padding: 24px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06); margin-bottom: 20px; }
+    .card h2 { font-size: 16px; font-weight: 700; margin-bottom: 16px;
+               display: flex; align-items: center; gap: 8px; }
+    .card h2 .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    @media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    label { font-size: 13px; font-weight: 600; color: var(--sub); }
+    select, input[type=text] {
+      border: 1.5px solid var(--border); border-radius: 8px;
+      padding: 10px 14px; font-size: 14px; font-family: inherit;
+      background: white; transition: border-color 0.2s; color: var(--text);
+    }
+    select:focus, input[type=text]:focus { outline: none; border-color: #4285f4; }
+
+    /* TASK INFO */
+    #task-info {
+      background: #f7fafc; border: 1.5px solid var(--border);
+      border-radius: 8px; padding: 14px 16px; margin-bottom: 16px;
+      font-size: 13px; display: none;
+    }
+    #task-info .section-label { font-weight: 700; margin-bottom: 6px; }
+    #task-info .meta { color: var(--sub); line-height: 1.6; }
+    #task-info .deadline-badge {
+      display: inline-block; border-radius: 20px; padding: 2px 10px;
+      font-size: 12px; font-weight: 600; color: white; margin-top: 4px;
+    }
+
+    /* DROP ZONE */
+    #drop-zone {
+      border: 2.5px dashed var(--border); border-radius: var(--radius);
+      padding: 40px 20px; text-align: center; cursor: pointer;
+      transition: all 0.2s; margin-bottom: 16px;
+    }
+    #drop-zone.drag-over { border-color: #4285f4; background: #ebf8ff; }
+    #drop-zone.has-files { border-color: #38a169; background: #f0fff4; }
+    #drop-zone svg { margin: 0 auto 12px; display: block; opacity: 0.4; }
+    #drop-zone p { color: var(--sub); font-size: 14px; }
+    #drop-zone .hint { font-size: 12px; opacity: 0.7; margin-top: 4px; }
+    #file-input { display: none; }
+
+    /* FILE LIST */
+    #file-list { margin-bottom: 16px; }
+    .file-item {
+      display: flex; align-items: center; gap: 10px;
+      background: #f7fafc; border-radius: 8px; padding: 10px 14px;
+      margin-bottom: 8px; font-size: 13px;
+    }
+    .file-item .file-name { flex: 1; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .file-item .file-size { color: var(--sub); flex-shrink: 0; }
+    .file-item .remove-btn { cursor: pointer; color: #e53e3e; border: none; background: none;
+                              font-size: 16px; line-height: 1; padding: 0 4px; }
+
+    /* UPLOAD BTN */
+    #upload-btn {
+      width: 100%; padding: 14px; border: none; border-radius: var(--radius);
+      background: linear-gradient(135deg, #2980b9, #1a3a5c);
+      color: white; font-size: 15px; font-weight: 700;
+      cursor: pointer; transition: all 0.2s; letter-spacing: 0.5px;
+    }
+    #upload-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(41,128,185,0.4); }
+    #upload-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+    /* PROGRESS */
+    #progress-section { display: none; margin-bottom: 16px; }
+    .progress-bar-wrap { background: var(--border); border-radius: 20px; height: 8px; overflow: hidden; }
+    .progress-bar { background: linear-gradient(90deg, #4285f4, #34a853);
+                    height: 100%; border-radius: 20px; transition: width 0.3s; width: 0%; }
+    #progress-text { font-size: 13px; color: var(--sub); margin-top: 8px; text-align: center; }
+
+    /* TOAST */
+    #toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(100px);
+      background: #2d3748; color: white; padding: 12px 24px; border-radius: 8px;
+      font-size: 14px; transition: transform 0.3s; z-index: 999; white-space: nowrap;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+    #toast.success { background: #276749; }
+    #toast.error { background: #c53030; }
+
+    /* RECENT UPLOADS */
+    #recent-section { display: none; }
+    .upload-entry {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 13px;
+    }
+    .upload-entry:last-child { border-bottom: none; }
+    .upload-entry .section-chip {
+      border-radius: 20px; padding: 3px 10px; font-size: 11px;
+      font-weight: 700; color: white; flex-shrink: 0;
+    }
+    .upload-entry a { color: #2980b9; text-decoration: none; font-weight: 500; }
+    .upload-entry a:hover { text-decoration: underline; }
+    .upload-entry .ts { color: var(--sub); margin-left: auto; flex-shrink: 0; }
+
+    /* SECTION OVERVIEW */
+    .overview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 24px; }
+    .overview-item {
+      border-radius: 10px; padding: 14px; cursor: pointer;
+      transition: all 0.2s; border: 2px solid transparent;
+    }
+    .overview-item:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
+    .overview-item.active { border-color: white; box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
+    .overview-item .num { font-size: 22px; font-weight: 800; color: rgba(255,255,255,0.9); }
+    .overview-item .sec-name { font-size: 11px; color: rgba(255,255,255,0.85); margin-top: 4px; line-height: 1.4; }
+    .overview-item .due { font-size: 10px; color: rgba(255,255,255,0.7); margin-top: 6px; }
+  </style>
+</head>
+<body>
+
+<div id="setup-banner">
+  <h3>⚙️ 首次使用設定 — 請依以下步驟設定 Google OAuth2</h3>
+  <ol>
+    <li>前往 <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a>，建立新專案（或選用現有專案）</li>
+    <li>啟用 <strong>Google Drive API</strong>（搜尋「Drive API」→ 啟用）</li>
+    <li>前往「憑證」→「建立憑證」→「OAuth 2.0 用戶端 ID」，類型選 <strong>網頁應用程式</strong></li>
+    <li>「已授權的 JavaScript 來源」加入 <code>file://</code>（本機）或你部署的網址</li>
+    <li>複製用戶端 ID，填入此頁面原始碼中 <code>CLIENT_ID: 'YOUR_GOOGLE_CLIENT_ID'</code> 欄位</li>
+    <li>儲存後重新整理頁面</li>
+  </ol>
+</div>
+
+<header>
+  <div>
+    <div class="badge">NCMEA 2026 國家臨床醫學教育獎</div>
+    <h1>創新臨床教學組 ─ 資料上傳系統</h1>
+    <p>繳交期限：2026/5/29　｜　書面評審佔總成績 20%</p>
+  </div>
+  <div class="deadline-pill">截止 5/29</div>
+</header>
+
+<main>
+
+  <!-- AUTH -->
+  <div id="auth-section">
+    <h2>請先登入 Google 帳號</h2>
+    <p>使用您的 Google 帳號登入後，即可上傳資料至團隊共享雲端硬碟</p>
+    <button id="signin-btn" onclick="signIn()">
+      <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.36-8.16 2.36-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+      使用 Google 帳號登入
+    </button>
+  </div>
+
+  <!-- USER BAR -->
+  <div id="user-bar">
+    <img id="user-avatar" src="" alt="">
+    <div>
+      <div class="name" id="user-name"></div>
+      <div class="email" id="user-email"></div>
+    </div>
+    <button id="signout-btn" onclick="signOut()">登出</button>
+  </div>
+
+  <!-- UPLOAD SECTION -->
+  <div id="upload-section">
+
+    <!-- Section Overview -->
+    <div class="overview-grid" id="overview-grid"></div>
+
+    <!-- Form Card -->
+    <div class="card">
+      <h2><span class="dot" style="background:#2980b9"></span>上傳資料</h2>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>成員姓名 *</label>
+          <select id="member-select" onchange="updateTaskInfo()">
+            <option value="">─ 請選擇 ─</option>
+            <option>家豪</option>
+            <option>湘欣</option>
+            <option>勤策</option>
+            <option>芯儒</option>
+            <option>凱淇</option>
+            <option>凱娸</option>
+            <option>教學部</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>評分構面 *</label>
+          <select id="section-select" onchange="populateTasks(); updateTaskInfo()">
+            <option value="">─ 請選擇 ─</option>
+            <option value="0">壹、計畫背景（20分）</option>
+            <option value="1">貳、問題結構與措施探討（10分）</option>
+            <option value="2">參、執行過程（25分）</option>
+            <option value="3">肆、成果表現（25分）</option>
+            <option value="4">伍、整體運作及檢討（10分）</option>
+            <option value="5">陸、資料呈現（10分）</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:16px;">
+        <label>評分項目 *</label>
+        <select id="task-select" onchange="updateTaskInfo()">
+          <option value="">─ 請先選擇構面 ─</option>
+        </select>
+      </div>
+
+      <div class="form-group" style="margin-bottom:16px;">
+        <label>備註說明（可選）</label>
+        <input type="text" id="note-input" placeholder="例如：初稿、第二版、圖表資料…">
+      </div>
+
+      <!-- Task Info -->
+      <div id="task-info">
+        <div class="section-label" id="task-info-title"></div>
+        <div class="meta" id="task-info-meta"></div>
+      </div>
+
+      <!-- Drop Zone -->
+      <div id="drop-zone" onclick="document.getElementById('file-input').click()"
+           ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)"
+           ondrop="handleDrop(event)">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <p>點擊或拖放檔案至此處</p>
+        <div class="hint">支援任何格式（Word、PDF、Excel、圖片、ZIP 等）</div>
+      </div>
+      <input type="file" id="file-input" multiple onchange="handleFileSelect(event)">
+
+      <!-- File List -->
+      <div id="file-list"></div>
+
+      <!-- Progress -->
+      <div id="progress-section">
+        <div class="progress-bar-wrap">
+          <div class="progress-bar" id="progress-bar"></div>
+        </div>
+        <div id="progress-text"></div>
+      </div>
+
+      <button id="upload-btn" onclick="startUpload()" disabled>上傳至 Google Drive</button>
+    </div>
+
+  </div>
+
+  <!-- Recent Uploads -->
+  <div id="recent-section" class="card">
+    <h2><span class="dot" style="background:#38a169"></span>本次上傳紀錄</h2>
+    <div id="recent-list"></div>
+  </div>
+
+</main>
+
+<div id="toast"></div>
+
+<script src="https://accounts.google.com/gsi/client" async></script>
+<script>
+
+/* ── CONFIG ───────────────────────────────────────────────────── */
+const CONFIG = {
+  CLIENT_ID: 'YOUR_GOOGLE_CLIENT_ID',           // ← 填入你的 OAuth2 Client ID
+  PARENT_FOLDER_ID: '1jeTAWtY0abDpGqpcPpCjUScOW2bPVrsh',
+  SCOPES: 'https://www.googleapis.com/auth/drive.file openid profile email',
+};
+
+/* ── DATA ─────────────────────────────────────────────────────── */
+const SECTIONS = [
+  {
+    id: '壹', name: '計畫背景', score: 20, deadline: '2026/5/4', color: '#c0392b',
+    folderName: '壹、計畫背景',
+    tasks: [
+      { num: 1, title: '教育科學理論基礎與主題重要性', primary: ['家豪'], assist: ['湘欣','勤策','芯儒','凱淇','凱娸'] },
+      { num: 2, title: '專案設計適當性', primary: ['家豪'], assist: ['湘欣','勤策','芯儒','凱淇','凱娸'] },
+      { num: 3, title: '創新教學導入之理由、方式與過程之適當性', primary: ['家豪'], assist: ['湘欣','勤策','芯儒','凱淇','凱娸'] },
+      { num: 4, title: '團隊形成或維持並持續改善原教學模式所達成之目標', primary: ['家豪'], assist: ['湘欣','勤策','芯儒','凱淇','凱娸'] },
+    ]
+  },
+  {
+    id: '貳', name: '問題結構與措施探討', score: 10, deadline: '2026/5/7', color: '#d35400',
+    folderName: '貳、問題結構與措施探討',
+    tasks: [
+      { num: 1, title: '問題分析、探討並求證問題形成或影響目標達成之結構', primary: ['家豪'], assist: ['湘欣'] },
+      { num: 2, title: '引用教育科學理論或採行之相關文獻與技術', primary: ['家豪'], assist: ['湘欣'] },
+      { num: 3, title: '以數據或實例來呈現事實現況', primary: ['勤策'], assist: ['湘欣','芯儒','凱淇','凱娸'] },
+      { num: 4, title: '實務應用性', primary: ['湘欣'], assist: ['勤策','芯儒','凱淇','凱娸'] },
+      { num: 5, title: '跨部門或跨領域之團隊運作', primary: ['湘欣'], assist: ['勤策','芯儒','凱淇','凱娸'] },
+    ]
+  },
+  {
+    id: '參', name: '執行過程', score: 25, deadline: '2026/5/12', color: '#e67e22',
+    folderName: '參、執行過程',
+    tasks: [
+      { num: 1, title: '實務運用妥適性、普及性、時效性', primary: ['家豪','勤策'], assist: ['湘欣','芯儒','凱淇','凱娸'] },
+      { num: 2, title: '師資培育或培訓機制', primary: ['湘欣','家豪'], assist: ['勤策','芯儒','凱淇','凱娸'] },
+      { num: 3, title: '改善教師臨床教學工作負荷', primary: ['湘欣','家豪'], assist: ['勤策','芯儒','凱淇','凱娸'] },
+    ]
+  },
+  {
+    id: '肆', name: '成果表現', score: 25, deadline: '2026/5/17', color: '#27ae60',
+    folderName: '肆、成果表現',
+    tasks: [
+      { num: 1, title: '效果確認和改善目標之達成程度', primary: ['芯儒','凱淇'], assist: ['湘欣','勤策','凱娸'] },
+      { num: 2, title: '符合素養導向之教學設計', primary: ['家豪'], assist: [] },
+      { num: 3, title: '展現多元評量面向與應用', primary: ['湘欣','家豪'], assist: ['勤策','芯儒','凱淇','凱娸'] },
+      { num: 4, title: '具教學成效優化/改進性或創新性（與普遍作法有區隔）', primary: ['湘欣','家豪'], assist: ['勤策','芯儒','凱淇','凱娸'] },
+    ]
+  },
+  {
+    id: '伍', name: '整體運作及檢討', score: 10, deadline: '2026/5/21', color: '#2980b9',
+    folderName: '伍、整體運作及檢討',
+    tasks: [
+      { num: 1, title: '專案設計完整性', primary: ['教學部'], assist: ['家豪'] },
+      { num: 2, title: '貢獻及影響程度', primary: ['湘欣','家豪'], assist: ['勤策','芯儒','凱淇','凱娸'] },
+      { num: 3, title: '具學習/推廣價值', primary: ['湘欣','家豪'], assist: ['勤策','芯儒','凱淇','凱娸'] },
+      { num: 4, title: '本期專案執行之檢討（含未解問題之持續改善）', primary: ['湘欣','家豪'], assist: ['勤策','芯儒','凱淇','凱娸'] },
+      { num: 5, title: '未來之重要目標與行動', primary: ['湘欣','家豪'], assist: ['勤策','芯儒','凱淇','凱娸'] },
+    ]
+  },
+  {
+    id: '陸', name: '資料呈現', score: 10, deadline: '2026/5/24', color: '#8e44ad',
+    folderName: '陸、資料呈現',
+    tasks: [
+      { num: 1, title: '整體周延性', primary: ['教學部'], assist: ['家豪'] },
+      { num: 2, title: '文字流暢性', primary: ['教學部'], assist: ['家豪'] },
+      { num: 3, title: '內容邏輯性（系統分明、前後連貫程度）', primary: ['教學部'], assist: ['家豪'] },
+      { num: 4, title: '圖表文字清晰簡明之情形', primary: ['教學部'], assist: ['家豪'] },
+      { num: 5, title: '摘要書寫品質', primary: ['教學部'], assist: ['家豪'] },
+    ]
+  },
+];
+
+/* ── STATE ────────────────────────────────────────────────────── */
+let tokenClient, accessToken = null, selectedFiles = [], recentUploads = [];
+const folderCache = {};
+
+/* ── INIT ─────────────────────────────────────────────────────── */
+window.onload = () => {
+  if (CONFIG.CLIENT_ID === 'YOUR_GOOGLE_CLIENT_ID') {
+    document.getElementById('setup-banner').style.display = 'block';
+    return;
+  }
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CONFIG.CLIENT_ID,
+    scope: CONFIG.SCOPES,
+    callback: handleTokenResponse,
+  });
+  buildOverview();
+};
+
+function buildOverview() {
+  const grid = document.getElementById('overview-grid');
+  SECTIONS.forEach((s, i) => {
+    const el = document.createElement('div');
+    el.className = 'overview-item';
+    el.style.background = s.color;
+    el.innerHTML = `
+      <div class="num">${s.id}</div>
+      <div class="sec-name">${s.name}</div>
+      <div class="due">截止 ${s.deadline}</div>`;
+    el.onclick = () => {
+      document.getElementById('section-select').value = i;
+      populateTasks(); updateTaskInfo();
+      document.querySelector('.card').scrollIntoView({ behavior: 'smooth' });
+    };
+    grid.appendChild(el);
+  });
+}
+
+/* ── AUTH ─────────────────────────────────────────────────────── */
+function signIn() { tokenClient.requestAccessToken(); }
+
+function handleTokenResponse(resp) {
+  if (resp.error) { showToast('登入失敗：' + resp.error, 'error'); return; }
+  accessToken = resp.access_token;
+  fetchUserProfile();
+  document.getElementById('auth-section').style.display = 'none';
+  document.getElementById('user-bar').style.display = 'flex';
+  document.getElementById('upload-section').style.display = 'block';
+}
+
+async function fetchUserProfile() {
+  const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo',
+    { headers: { Authorization: `Bearer ${accessToken}` } });
+  const info = await r.json();
+  document.getElementById('user-name').textContent = info.name || '';
+  document.getElementById('user-email').textContent = info.email || '';
+  if (info.picture) document.getElementById('user-avatar').src = info.picture;
+}
+
+function signOut() {
+  google.accounts.oauth2.revoke(accessToken, () => {
+    accessToken = null;
+    document.getElementById('auth-section').style.display = 'block';
+    document.getElementById('user-bar').style.display = 'none';
+    document.getElementById('upload-section').style.display = 'none';
+    document.getElementById('recent-section').style.display = 'none';
+  });
+}
+
+/* ── FORM ─────────────────────────────────────────────────────── */
+function populateTasks() {
+  const si = document.getElementById('section-select').value;
+  const sel = document.getElementById('task-select');
+  sel.innerHTML = '<option value="">─ 請選擇項目 ─</option>';
+  if (si === '') return;
+  const section = SECTIONS[parseInt(si)];
+  section.tasks.forEach((t, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = `${t.num}. ${t.title}`;
+    sel.appendChild(opt);
+  });
+}
+
+function updateTaskInfo() {
+  const si = document.getElementById('section-select').value;
+  const ti = document.getElementById('task-select').value;
+  const member = document.getElementById('member-select').value;
+  const info = document.getElementById('task-info');
+
+  if (si === '' || ti === '') { info.style.display = 'none'; updateUploadBtn(); return; }
+
+  const section = SECTIONS[parseInt(si)];
+  const task = section.tasks[parseInt(ti)];
+  const isPrimary = task.primary.includes(member);
+  const isAssist = task.assist.includes(member);
+
+  document.getElementById('task-info-title').innerHTML =
+    `<span style="color:${section.color}; font-size:14px">${section.id}、${section.name}</span>
+     <span style="margin-left:8px; font-size:13px">第 ${task.num} 項</span>`;
+
+  document.getElementById('task-info-meta').innerHTML =
+    `<strong style="font-size:14px">${task.title}</strong><br>
+     主責：${task.primary.join('、') || '—'}　協助：${task.assist.join('、') || '—'}<br>
+     <span class="deadline-badge" style="background:${section.color}">截止 ${section.deadline}</span>
+     ${member && isPrimary ? ' <span class="deadline-badge" style="background:#27ae60">主責</span>' : ''}
+     ${member && isAssist ? ' <span class="deadline-badge" style="background:#7f8c8d">協助</span>' : ''}`;
+
+  info.style.display = 'block';
+  updateUploadBtn();
+}
+
+function updateUploadBtn() {
+  const ok = document.getElementById('member-select').value &&
+             document.getElementById('section-select').value !== '' &&
+             document.getElementById('task-select').value !== '' &&
+             selectedFiles.length > 0;
+  document.getElementById('upload-btn').disabled = !ok;
+}
+
+/* ── FILE HANDLING ────────────────────────────────────────────── */
+function handleDragOver(e) { e.preventDefault(); document.getElementById('drop-zone').classList.add('drag-over'); }
+function handleDragLeave() { document.getElementById('drop-zone').classList.remove('drag-over'); }
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag-over');
+  addFiles(Array.from(e.dataTransfer.files));
+}
+function handleFileSelect(e) { addFiles(Array.from(e.target.files)); }
+
+function addFiles(files) {
+  selectedFiles = [...selectedFiles, ...files];
+  renderFileList();
+  updateUploadBtn();
+}
+
+function removeFile(idx) {
+  selectedFiles.splice(idx, 1);
+  renderFileList();
+  updateUploadBtn();
+}
+
+function renderFileList() {
+  const list = document.getElementById('file-list');
+  const zone = document.getElementById('drop-zone');
+  list.innerHTML = '';
+  if (selectedFiles.length === 0) { zone.classList.remove('has-files'); return; }
+  zone.classList.add('has-files');
+  selectedFiles.forEach((f, i) => {
+    const el = document.createElement('div');
+    el.className = 'file-item';
+    el.innerHTML = `
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/></svg>
+      <span class="file-name">${f.name}</span>
+      <span class="file-size">${formatSize(f.size)}</span>
+      <button class="remove-btn" onclick="removeFile(${i})">×</button>`;
+    list.appendChild(el);
+  });
+}
+
+function formatSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/(1024*1024)).toFixed(1) + ' MB';
+}
+
+/* ── DRIVE API ────────────────────────────────────────────────── */
+async function driveGet(url) {
+  const r = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+  return r.json();
+}
+async function drivePost(url, body) {
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return r.json();
+}
+
+async function getOrCreateFolder(name, parentId) {
+  const cacheKey = `${parentId}/${name}`;
+  if (folderCache[cacheKey]) return folderCache[cacheKey];
+
+  const q = `name='${name}' and '${parentId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+  const result = await driveGet(
+    `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name)&supportsAllDrives=true`
+  );
+  if (result.files && result.files.length > 0) {
+    folderCache[cacheKey] = result.files[0].id;
+    return result.files[0].id;
+  }
+  const folder = await drivePost('https://www.googleapis.com/drive/v3/files?supportsAllDrives=true', {
+    name, mimeType: 'application/vnd.google-apps.folder', parents: [parentId],
+  });
+  folderCache[cacheKey] = folder.id;
+  return folder.id;
+}
+
+async function uploadFile(file, folderId, fileName) {
+  return new Promise((resolve, reject) => {
+    const metadata = { name: fileName, parents: [folderId] };
+    const form = new FormData();
+    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+    form.append('file', file);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true');
+    xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`);
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) {
+        const pct = Math.round(e.loaded / e.total * 100);
+        document.getElementById('progress-bar').style.width = pct + '%';
+      }
+    };
+    xhr.onload = () => {
+      if (xhr.status === 200) resolve(JSON.parse(xhr.responseText));
+      else reject(new Error(xhr.responseText));
+    };
+    xhr.onerror = () => reject(new Error('網路錯誤'));
+    xhr.send(form);
+  });
+}
+
+/* ── UPLOAD FLOW ──────────────────────────────────────────────── */
+async function startUpload() {
+  const member = document.getElementById('member-select').value;
+  const si = parseInt(document.getElementById('section-select').value);
+  const ti = parseInt(document.getElementById('task-select').value);
+  const note = document.getElementById('note-input').value.trim();
+  const section = SECTIONS[si];
+  const task = section.tasks[ti];
+
+  document.getElementById('upload-btn').disabled = true;
+  document.getElementById('progress-section').style.display = 'block';
+
+  const dateStr = new Date().toISOString().slice(0,10);
+  let successCount = 0;
+
+  try {
+    const subFolderId = await getOrCreateFolder(section.folderName, CONFIG.PARENT_FOLDER_ID);
+
+    for (let i = 0; i < selectedFiles.length; i++) {
+      const file = selectedFiles[i];
+      const ext = file.name.includes('.') ? '.' + file.name.split('.').pop() : '';
+      const baseName = file.name.replace(/\.[^.]+$/, '');
+      const noteStr = note ? `_${note}` : '';
+      const fileName = `[${dateStr}]_${member}_${section.id}${task.num}${noteStr}_${baseName}${ext}`;
+
+      document.getElementById('progress-text').textContent =
+        `上傳中（${i+1}/${selectedFiles.length}）：${file.name}`;
+      document.getElementById('progress-bar').style.width = '0%';
+
+      const result = await uploadFile(file, subFolderId, fileName);
+      successCount++;
+
+      recentUploads.unshift({
+        name: fileName,
+        sectionName: section.name,
+        sectionColor: section.color,
+        fileId: result.id,
+        time: new Date().toLocaleString('zh-TW'),
+      });
+    }
+
+    renderRecentUploads();
+    showToast(`✓ 成功上傳 ${successCount} 個檔案`, 'success');
+    selectedFiles = [];
+    renderFileList();
+    document.getElementById('note-input').value = '';
+    document.getElementById('file-input').value = '';
+    document.getElementById('progress-section').style.display = 'none';
+
+  } catch (err) {
+    console.error(err);
+    const msg = err.message.includes('403') ? '權限不足，請確認您對該雲端資料夾有寫入權限' :
+                err.message.includes('401') ? '登入已過期，請重新登入' :
+                '上傳失敗：' + err.message;
+    showToast(msg, 'error');
+    document.getElementById('progress-section').style.display = 'none';
+  }
+
+  document.getElementById('upload-btn').disabled = false;
+  updateUploadBtn();
+}
+
+function renderRecentUploads() {
+  const sec = document.getElementById('recent-section');
+  const list = document.getElementById('recent-list');
+  sec.style.display = 'block';
+  list.innerHTML = '';
+  recentUploads.slice(0, 10).forEach(u => {
+    const el = document.createElement('div');
+    el.className = 'upload-entry';
+    const link = u.fileId
+      ? `<a href="https://drive.google.com/file/d/${u.fileId}/view" target="_blank">${u.name}</a>`
+      : `<span>${u.name}</span>`;
+    el.innerHTML = `
+      <span class="section-chip" style="background:${u.sectionColor}">${u.sectionName}</span>
+      ${link}
+      <span class="ts">${u.time}</span>`;
+    list.appendChild(el);
+  });
+}
+
+/* ── TOAST ────────────────────────────────────────────────────── */
+let toastTimer;
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.className = '', 4000);
+}
+</script>
+</body>
+</html>
