@@ -197,17 +197,6 @@
 </head>
 <body>
 
-<div id="setup-banner">
-  <h3>⚙️ 首次使用設定 — 請依以下步驟設定 Google OAuth2</h3>
-  <ol>
-    <li>前往 <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a>，建立新專案（或選用現有專案）</li>
-    <li>啟用 <strong>Google Drive API</strong>（搜尋「Drive API」→ 啟用）</li>
-    <li>前往「憑證」→「建立憑證」→「OAuth 2.0 用戶端 ID」，類型選 <strong>網頁應用程式</strong></li>
-    <li>「已授權的 JavaScript 來源」加入 <code>file://</code>（本機）或你部署的網址</li>
-    <li>複製用戶端 ID，填入此頁面原始碼中 <code>CLIENT_ID: 'YOUR_GOOGLE_CLIENT_ID'</code> 欄位</li>
-    <li>儲存後重新整理頁面</li>
-  </ol>
-</div>
 
 <header>
   <div>
@@ -336,7 +325,7 @@
 
 <div id="toast"></div>
 
-<script src="https://accounts.google.com/gsi/client" async></script>
+<script src="https://accounts.google.com/gsi/client" async onload="initGIS()"></script>
 <script>
 
 /* ── CONFIG ───────────────────────────────────────────────────── */
@@ -417,18 +406,15 @@ let tokenClient, accessToken = null, selectedFiles = [], recentUploads = [];
 const folderCache = {};
 
 /* ── INIT ─────────────────────────────────────────────────────── */
-window.onload = () => {
-  if (CONFIG.CLIENT_ID === 'YOUR_GOOGLE_CLIENT_ID') {
-    document.getElementById('setup-banner').style.display = 'block';
-    return;
-  }
+function initGIS() {
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: CONFIG.CLIENT_ID,
     scope: CONFIG.SCOPES,
     callback: handleTokenResponse,
   });
-  buildOverview();
-};
+}
+
+window.onload = () => { buildOverview(); };
 
 function buildOverview() {
   const grid = document.getElementById('overview-grid');
