@@ -232,9 +232,6 @@
   <!-- UPLOAD SECTION -->
   <div id="upload-section">
 
-    <!-- Section Overview -->
-    <div class="overview-grid" id="overview-grid"></div>
-
     <!-- Form Card -->
     <div class="card">
       <h2><span class="dot" style="background:#2980b9"></span>上傳資料</h2>
@@ -253,36 +250,11 @@
             <option>教學部</option>
           </select>
         </div>
-        <div class="form-group">
-          <label>評分構面 *</label>
-          <select id="section-select" onchange="populateTasks(); updateTaskInfo()">
-            <option value="">─ 請選擇 ─</option>
-            <option value="0">壹、計畫背景（20分）</option>
-            <option value="1">貳、問題結構與措施探討（10分）</option>
-            <option value="2">參、執行過程（25分）</option>
-            <option value="3">肆、成果表現（25分）</option>
-            <option value="4">伍、整體運作及檢討（10分）</option>
-            <option value="5">陸、資料呈現（10分）</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="form-group" style="margin-bottom:16px;">
-        <label>評分項目 *</label>
-        <select id="task-select" onchange="updateTaskInfo()">
-          <option value="">─ 請先選擇構面 ─</option>
-        </select>
       </div>
 
       <div class="form-group" style="margin-bottom:16px;">
         <label>備註說明（可選）</label>
         <input type="text" id="note-input" placeholder="例如：初稿、第二版、圖表資料…">
-      </div>
-
-      <!-- Task Info -->
-      <div id="task-info">
-        <div class="section-label" id="task-info-title"></div>
-        <div class="meta" id="task-info-meta"></div>
       </div>
 
       <!-- Drop Zone -->
@@ -467,52 +439,8 @@ function signOut() {
 }
 
 /* ── FORM ─────────────────────────────────────────────────────── */
-function populateTasks() {
-  const si = document.getElementById('section-select').value;
-  const sel = document.getElementById('task-select');
-  sel.innerHTML = '<option value="">─ 請選擇項目 ─</option>';
-  if (si === '') return;
-  const section = SECTIONS[parseInt(si)];
-  section.tasks.forEach((t, i) => {
-    const opt = document.createElement('option');
-    opt.value = i;
-    opt.textContent = `${t.num}. ${t.title}`;
-    sel.appendChild(opt);
-  });
-}
-
-function updateTaskInfo() {
-  const si = document.getElementById('section-select').value;
-  const ti = document.getElementById('task-select').value;
-  const member = document.getElementById('member-select').value;
-  const info = document.getElementById('task-info');
-
-  if (si === '' || ti === '') { info.style.display = 'none'; updateUploadBtn(); return; }
-
-  const section = SECTIONS[parseInt(si)];
-  const task = section.tasks[parseInt(ti)];
-  const isPrimary = task.primary.includes(member);
-  const isAssist = task.assist.includes(member);
-
-  document.getElementById('task-info-title').innerHTML =
-    `<span style="color:${section.color}; font-size:14px">${section.id}、${section.name}</span>
-     <span style="margin-left:8px; font-size:13px">第 ${task.num} 項</span>`;
-
-  document.getElementById('task-info-meta').innerHTML =
-    `<strong style="font-size:14px">${task.title}</strong><br>
-     主責：${task.primary.join('、') || '—'}　協助：${task.assist.join('、') || '—'}<br>
-     <span class="deadline-badge" style="background:${section.color}">截止 ${section.deadline}</span>
-     ${member && isPrimary ? ' <span class="deadline-badge" style="background:#27ae60">主責</span>' : ''}
-     ${member && isAssist ? ' <span class="deadline-badge" style="background:#7f8c8d">協助</span>' : ''}`;
-
-  info.style.display = 'block';
-  updateUploadBtn();
-}
-
 function updateUploadBtn() {
   const ok = document.getElementById('member-select').value &&
-             document.getElementById('section-select').value !== '' &&
-             document.getElementById('task-select').value !== '' &&
              selectedFiles.length > 0;
   document.getElementById('upload-btn').disabled = !ok;
 }
@@ -626,11 +554,7 @@ async function uploadFile(file, folderId, fileName) {
 /* ── UPLOAD FLOW ──────────────────────────────────────────────── */
 async function startUpload() {
   const member = document.getElementById('member-select').value;
-  const si = parseInt(document.getElementById('section-select').value);
-  const ti = parseInt(document.getElementById('task-select').value);
   const note = document.getElementById('note-input').value.trim();
-  const section = SECTIONS[si];
-  const task = section.tasks[ti];
 
   document.getElementById('upload-btn').disabled = true;
   document.getElementById('progress-section').style.display = 'block';
@@ -639,26 +563,22 @@ async function startUpload() {
   let successCount = 0;
 
   try {
-    const subFolderId = await getOrCreateFolder(section.folderName, CONFIG.PARENT_FOLDER_ID);
-
     for (let i = 0; i < selectedFiles.length; i++) {
       const file = selectedFiles[i];
       const ext = file.name.includes('.') ? '.' + file.name.split('.').pop() : '';
       const baseName = file.name.replace(/\.[^.]+$/, '');
       const noteStr = note ? `_${note}` : '';
-      const fileName = `[${dateStr}]_${member}_${section.id}${task.num}${noteStr}_${baseName}${ext}`;
+      const fileName = `[${dateStr}]_${member}${noteStr}_${baseName}${ext}`;
 
       document.getElementById('progress-text').textContent =
         `上傳中（${i+1}/${selectedFiles.length}）：${file.name}`;
       document.getElementById('progress-bar').style.width = '0%';
 
-      const result = await uploadFile(file, subFolderId, fileName);
+      const result = await uploadFile(file, CONFIG.PARENT_FOLDER_ID, fileName);
       successCount++;
 
       recentUploads.unshift({
         name: fileName,
-        sectionName: section.name,
-        sectionColor: section.color,
         fileId: result.id,
         time: new Date().toLocaleString('zh-TW'),
       });
@@ -696,10 +616,7 @@ function renderRecentUploads() {
     const link = u.fileId
       ? `<a href="https://drive.google.com/file/d/${u.fileId}/view" target="_blank">${u.name}</a>`
       : `<span>${u.name}</span>`;
-    el.innerHTML = `
-      <span class="section-chip" style="background:${u.sectionColor}">${u.sectionName}</span>
-      ${link}
-      <span class="ts">${u.time}</span>`;
+    el.innerHTML = `${link}<span class="ts">${u.time}</span>`;
     list.appendChild(el);
   });
 }
